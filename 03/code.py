@@ -7,7 +7,7 @@ DATA = open('03/input.txt').read()
 
 def extract(s: str) -> list[tuple[int, int]]:
     return [
-        (int(A), int(B)) for A, B in (re.findall(r"mul\((\d+),(\d+)\)", s))
+        (int(m.group('A')), int(m.group('B'))) for m in (re.finditer(r"mul\((?P<A>\d+),(?P<B>\d+)\)", s))
     ]
 
 assert extract(SAMPLE_DATA) == [(2,4), (5,5), (11,8), (8,5)]
