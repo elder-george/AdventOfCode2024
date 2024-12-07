@@ -48,7 +48,7 @@ def find_starts(data: list[str]) -> Iterable[tuple[int, int]]:
         if data[y][x] == 'X':
             for dx, dy in [(0,1), (0,-1), (-1, 0), (1,0), (1,1), (1,-1), (-1, 1), (-1, -1)]:
                 if matches(data, 'XMAS', x, y, dx, dy):
-                    yield (x, y, dx, dy)
+                    yield (x, y)
 
 
 def problem1(data: list[str]) -> int:
@@ -56,4 +56,18 @@ def problem1(data: list[str]) -> int:
 
 
 assert problem1(SAMPLE) == 18
-print( problem1(DATA))
+print(problem1(DATA))
+
+# Problem 2
+
+def find_mas(data: list[str]) -> Iterable[tuple[int, int]]:
+    for x, y in coords(data):
+        if (matches(data, 'MAS', x, y, 1, 1) or matches(data, 'SAM', x, y, 1, 1)) and\
+            (matches(data, 'MAS', x, y+2, 1, -1) or matches(data, 'SAM', x, y+2, 1, -1)):
+            yield (x,y)
+
+def problem2(data: list[str]) -> int:
+    return sum(1 for _ in find_mas(data))
+
+assert problem2(SAMPLE) == 9
+print(problem2(DATA))
