@@ -54,7 +54,8 @@ SAMPLE = parse("""\
 97,13,75,29,47""".splitlines())
 
 DATA = parse([l.strip() for l in open('05/input.txt').readlines()])
-# print(DATA.rules)
+
+# Problem 1
 
 def to_graph(rules: list[tuple[int, int]]) -> dict[int, list[int]]:
     graph = defaultdict[int, list[int]](list)
@@ -62,6 +63,8 @@ def to_graph(rules: list[tuple[int, int]]) -> dict[int, list[int]]:
     for before, after in rules:
         graph[after].append(before)
 
+    # an ugly hack to ensure that the graph is fully populated
+    # otherwise it mutates during iteration and all hell goes loose
     for n, deps in dict(graph).items():
         for d in deps:
             if not d in graph:
@@ -89,32 +92,81 @@ def toposort(graph: dict[int, list[dict]]):
 
     return topological_order
 
-def is_correct(sorted: list[int], rule: list[int]) -> bool:
+def find_errors(sorted: list[int], update: list[int]) -> Iterable[int]:
     start = 0
-
-    for n in rule:
+    for i in range(0, len(update)):
+        n = update[i]
         if not n in sorted:
             continue
         try:
             start = sorted.index(n, start)
         except ValueError:
-            return False
+            yield i
+
+def is_correct(sorted: list[int], update: list[int]) -> bool:
+    # start = 0
+
+    # for n in update:
+    #     if not n in sorted:
+    #         continue
+    #     try:
+    #         start = sorted.index(n, start)
+    #     except ValueError:
+    #         return False
                 
-    return True
+    # return True
+    return len(list(find_errors(sorted, update))) == 0
 
 def find_good_updates(data: Input) -> Iterable[list[int]]:
 
     for u in data.updates:
         applicable_rules = [(a,b) for (a,b) in data.rules if a in u
                             ]
-        sorted_data = toposort(to_graph(applicable_rules))
-        if is_correct(sorted_data, u):
+        sorted_rules = toposort(to_graph(applicable_rules))
+        if is_correct(sorted_rules, u):
             yield u
 
-def problem1(data: Input) -> int:
+def sum_middles(updates: list[list[int]]) -> int:
     def mid(u: list[int]):
         return u[len(u)//2]
-    return sum(mid(u) for u in find_good_updates(data))
+    return sum(mid(u) for u in updates)
+
+def problem1(data: Input) -> int:
+    return sum_middles(find_good_updates(data))
 
 assert problem1(SAMPLE) == 143
 print("Problem 1: ", problem1(DATA))
+
+# Problem 2
+
+def fix(data: Input) -> Iterable[list[int]]:
+    correct = list(find_good_updates(data))
+    incorrect = [ u for u in data.updates if not u in correct ]
+
+    for u in incorrect:
+        applicable_rules = [(a,b) for (a,b) in data.rules if a in u
+                        ]
+        sorted_rules = toposort(to_graph(applicable_rules))
+
+        error_spots = list(find_errors(sorted_rules, u))
+        while error_spots:
+            spot = error_spots.pop()
+            val = u[spot]
+            u.pop(spot)
+            for i in range(0, len(u)):
+                attempt = list(u)   # copy
+                attempt.insert(i, val)
+                new_spots = list(find_errors(sorted_rules, attempt))
+                if len(new_spots) <= len(error_spots):
+                    u = attempt
+                    error_spots = new_spots
+                    break
+        yield u
+
+
+def problem2(data: Input) -> bool:
+    return sum_middles(fix(data))
+
+assert problem2(SAMPLE) == 123
+
+print("Problem 2: ", problem2(DATA))
