@@ -1,8 +1,10 @@
 
+from collections import defaultdict
 from dataclasses import dataclass
 import dataclasses
 from enum import Enum
-
+from copy import deepcopy
+from itertools import product
 
 class GuardDir(Enum):
     UP = '^'
@@ -63,6 +65,7 @@ SAMPLE_MAP = Map.parse([l.strip() for l in """\
 ........#.
 #.........
 ......#...""".splitlines()])
+# SAMPLE_MAP.objects = frozenset(SAMPLE_MAP.objects)
 
 assert(SAMPLE_MAP.width == 10)
 assert(SAMPLE_MAP.height == 10)
@@ -72,7 +75,7 @@ assert(SAMPLE_MAP.guard_pos == (4, 6))
 
 REAL_MAP = Map.parse([l.strip() for l in open('06/input.txt').readlines()])
 
-def make_one_turn(map: Map):
+def make_one_turn(map: Map) -> bool:
     dx, dy = delta_for[map.guard_dir]
 
     x, y = map.guard_pos
@@ -100,7 +103,44 @@ def track_positions(data: Map) -> set[tuple[int, int]]:
 
 
 def problem1(data: Map) -> int:
-    return len(track_positions(dataclasses.replace(data))) - 1
+    return len(track_positions(deepcopy(data))) - 1
 
 assert problem1(SAMPLE_MAP) == 41
 print( problem1(REAL_MAP) )
+
+# Part 2
+
+def is_looping(data: Map, turns_to_make: int) -> bool:
+    visits: defaultdict[tuple[int, int], set[GuardDir]] = defaultdict(set)
+
+    for _ in range(turns_to_make):
+        if data.guard_dir in visits[data.guard_pos]:
+            return True
+        visits[data.guard_pos].add(data.guard_dir)
+        if not make_one_turn(data):
+            break
+    
+    return False
+
+MODIFIED_SAMPLE_MAP = deepcopy(SAMPLE_MAP)
+MODIFIED_SAMPLE_MAP.objects.add((3, 6))
+
+assert is_looping(MODIFIED_SAMPLE_MAP, 100)
+
+TRIES = 10000
+def problem2(data: Map):
+    possible_spots = track_positions(deepcopy(data))
+
+    def try_pos(pos):
+        if pos == data.guard_pos:
+            return False
+        if pos in data.objects:
+            return False
+        copy = deepcopy(data)
+        copy.objects.add(pos)
+        return is_looping(copy, TRIES)
+    
+    return sum(try_pos(pos) for pos in possible_spots)
+
+assert problem2(SAMPLE_MAP) == 6
+print(problem2(REAL_MAP))
